@@ -14,7 +14,7 @@ const dimensionLabels = {
   signal: "异常感知"
 };
 
-const ogImageMap: Record<string, string> = {
+const ogPngImageMap: Record<string, string> = {
   "system-operator": "/og/system-operator.png",
   "hidden-villain": "/og/hidden-villain.png",
   "performative-savior": "/og/performative-savior.png",
@@ -26,6 +26,10 @@ const ogImageMap: Record<string, string> = {
   "chosen-substitute": "/og/chosen-substitute.png",
   "unstable-variable": "/og/unstable-variable.png"
 };
+
+const ogWebpImageMap: Record<string, string> = Object.fromEntries(
+  Object.entries(ogPngImageMap).map(([key, value]) => [key, value.replace(".png", ".webp")])
+) as Record<string, string>;
 
 const initialSession = loadSession();
 
@@ -93,7 +97,10 @@ export default function App() {
     ? import.meta.env.BASE_URL
     : `${import.meta.env.BASE_URL}/`;
   const primaryImageSrc = outcome
-    ? `${basePath}${(ogImageMap[outcome.primary.id] ?? outcome.primary.ogImage).replace(/^\/+/, "")}`
+    ? `${basePath}${(ogWebpImageMap[outcome.primary.id] ?? outcome.primary.ogImage).replace(/^\/+/, "")}`
+    : "";
+  const fallbackPrimaryPngSrc = outcome
+    ? `${basePath}${(ogPngImageMap[outcome.primary.id] ?? outcome.primary.ogImage).replace(/^\/+/, "")}`
     : "";
   const fallbackImageSrc = `${basePath}og/og-default.png`;
 
@@ -257,10 +264,19 @@ export default function App() {
             <img
               src={primaryImageSrc}
               alt={`${outcome.primary.name} OG 图`}
+              loading="lazy"
+              decoding="async"
+              onLoad={() => setImageMissing(false)}
               onError={(event) => {
                 const target = event.target as HTMLImageElement;
-                if (target.dataset.fallback !== "1") {
-                  target.dataset.fallback = "1";
+                const fallbackStage = target.dataset.fallbackStage ?? "0";
+                if (fallbackStage === "0") {
+                  target.dataset.fallbackStage = "1";
+                  target.src = fallbackPrimaryPngSrc;
+                  return;
+                }
+                if (fallbackStage === "1") {
+                  target.dataset.fallbackStage = "2";
                   target.src = fallbackImageSrc;
                   return;
                 }
